@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ruff
+        run: pip install ruff==0.15.11
+
+      - name: Check formatting
+        run: ruff format . --check
+
+      - name: Check lint
+        run: ruff check .
+
+  security:
+    name: Security Audit (Bandit + Semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools
+        run: pip install bandit[toml]==1.9.4 semgrep
+
+      - name: Bandit - static security analysis
+        run: |
+          bandit -r . -x ./tests,./.venv \
+            --configfile pyproject.toml \
+            --format txt
+
+      - name: Semgrep - pattern-based security rules
+        run: |
+          semgrep --config p/python --config p/bandit \
+            --exclude tests --exclude .venv \
+            --error .
+
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -v
