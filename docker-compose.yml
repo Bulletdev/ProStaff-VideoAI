@@ -7,7 +7,7 @@ services:
       - .:/app
       - clips_data:/tmp/videoai_clips
     ports:
-      - "8001:8001"
+      - "8002:8001"
 
 volumes:
   clips_data:
