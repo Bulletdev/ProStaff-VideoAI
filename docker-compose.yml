@@ -9,6 +9,14 @@ services:
       - clips_data:/tmp/videoai_clips
     ports:
       - "8002:8001"
+    networks:
+      - coolify
+      - clips_net
+
+networks:
+  coolify:
+    external: true
+  clips_net: {}
 
 volumes:
   clips_data:
