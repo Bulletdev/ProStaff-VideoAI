@@ -2,6 +2,7 @@ services:
   api:
     build: .
     container_name: prostaff-videoai
+    hostname: prostaff-videoai
     env_file: .env
     volumes:
       - .:/app
