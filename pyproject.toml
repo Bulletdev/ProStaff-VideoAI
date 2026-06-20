@@ -1,0 +1,50 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    "__pycache__",
+    ".venv",
+    ".git",
+    "*.pyc",
+]
+
+[tool.ruff.lint]
+# E/W = pycodestyle, F = pyflakes, I = isort, B = bugbear,
+# C4 = comprehensions, UP = pyupgrade, SIM = simplify,
+# N = naming, S = security (bandit subset), PERF = perflint
+select = ["E", "W", "F", "I", "B", "C4", "UP", "SIM", "N", "S", "PERF"]
+ignore = [
+    # FastAPI: Depends(...) in default arg is idiomatic, not a bug
+    "B008",
+    # assert in tests is expected; handled per-file below
+    "S101",
+    # subprocess used intentionally in clips.py (ffmpeg pipeline)
+    "S603",
+    "S404",
+    # /tmp/ path is intentional (FileLock + tempfile.TemporaryDirectory)
+    "S108",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: asserts are the whole point; relax all security rules
+"tests/**/*.py" = ["S", "B"]
+# Validation script is a standalone CLI tool
+"scripts/**/*.py" = ["T20"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+# B404/B603: subprocess import + call without shell - intentional (ffmpeg, yt-dlp wrappers)
+# B108: /tmp/ hardcoded - intentional (FileLock path shared across Uvicorn workers)
+# B110: try/except/pass - intentional in pipeline (graceful degradation, documented inline)
+skips = ["B404", "B603", "B108", "B110"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
