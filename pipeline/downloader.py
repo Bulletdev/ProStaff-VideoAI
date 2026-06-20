@@ -50,7 +50,8 @@ def download_video(url: str, output_dir: str) -> str:
     cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE")
     if cookies_file and os.path.isfile(cookies_file):
         # Copy to a temp file so yt-dlp doesn't overwrite the master cookie file
-        tmp_cookies = tempfile.mktemp(suffix=".txt")
+        fd, tmp_cookies = tempfile.mkstemp(suffix=".txt")
+        os.close(fd)
         shutil.copy2(cookies_file, tmp_cookies)
         ydl_opts["cookiefile"] = tmp_cookies
 
