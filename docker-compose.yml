@@ -1,0 +1,13 @@
+services:
+  api:
+    build: .
+    container_name: prostaff-videoai
+    env_file: .env
+    volumes:
+      - .:/app
+      - clips_data:/tmp/videoai_clips
+    ports:
+      - "8001:8001"
+
+volumes:
+  clips_data:
