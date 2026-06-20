@@ -3,7 +3,9 @@ FROM python:3.11-slim
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
-    build-essential curl ffmpeg \
+    build-essential curl ffmpeg unzip nodejs \
+    && curl -fsSL https://deno.land/install.sh | sh \
+    && ln -sf /root/.deno/bin/deno /usr/local/bin/deno \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./

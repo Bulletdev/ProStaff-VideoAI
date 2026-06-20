@@ -21,8 +21,7 @@ def _strip_playlist(url: str) -> str:
 def download_video(url: str, output_dir: str) -> str:
     """Downloads video at analysis quality (360p) and returns local file path.
 
-    Uses ios/android YouTube clients to avoid CDN 403s.
-    360p is sufficient for scene detection and audio analysis.
+    Uses Deno + ejs:github to solve YouTube's n-challenge.
     Set YOUTUBE_COOKIES_FILE env var to a Netscape-format cookie file to bypass
     bot detection on servers (export from browser with 'Get cookies.txt LOCALLY').
     """
@@ -42,7 +41,8 @@ def download_video(url: str, output_dir: str) -> str:
         "outtmpl": os.path.join(output_dir, "video.%(ext)s"),
         "merge_output_format": "mp4",
         "no_playlist": True,
-        "extractor_args": {"youtube": {"player_client": ["ios", "android", "web"]}},
+        "extractor_args": {"youtube": {"player_client": ["web"]}},
+        "remote_components": ["ejs:github"],
         "logger": _SilentLogger(errors),
         "ignoreerrors": False,
     }
