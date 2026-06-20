@@ -1,4 +1,6 @@
 import os
+import shutil
+import tempfile
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import yt_dlp
@@ -27,6 +29,7 @@ def download_video(url: str, output_dir: str) -> str:
     url = _strip_playlist(url)
 
     errors = []
+    tmp_cookies = None
 
     ydl_opts = {
         # 360p cap - enough for scene detection + audio, much smaller download
@@ -46,12 +49,19 @@ def download_video(url: str, output_dir: str) -> str:
 
     cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE")
     if cookies_file and os.path.isfile(cookies_file):
-        ydl_opts["cookiefile"] = cookies_file
+        # Copy to a temp file so yt-dlp doesn't overwrite the master cookie file
+        tmp_cookies = tempfile.mktemp(suffix=".txt")
+        shutil.copy2(cookies_file, tmp_cookies)
+        ydl_opts["cookiefile"] = tmp_cookies
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ret = ydl.download([url])
-        if ret != 0:
-            raise RuntimeError(f"yt-dlp failed (code {ret}): {'; '.join(errors[-3:])}")
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ret = ydl.download([url])
+            if ret != 0:
+                raise RuntimeError(f"yt-dlp failed (code {ret}): {'; '.join(errors[-3:])}")
+    finally:
+        if tmp_cookies and os.path.isfile(tmp_cookies):
+            os.unlink(tmp_cookies)
 
     candidates = [
         f for f in os.listdir(output_dir) if f.startswith("video.") and not f.endswith(".part")
