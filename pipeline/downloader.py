@@ -19,8 +19,10 @@ def _strip_playlist(url: str) -> str:
 def download_video(url: str, output_dir: str) -> str:
     """Downloads video at analysis quality (360p) and returns local file path.
 
-    Uses the Android YouTube client to avoid CDN 403s.
+    Uses ios/android YouTube clients to avoid CDN 403s.
     360p is sufficient for scene detection and audio analysis.
+    Set YOUTUBE_COOKIES_FILE env var to a Netscape-format cookie file to bypass
+    bot detection on servers (export from browser with 'Get cookies.txt LOCALLY').
     """
     url = _strip_playlist(url)
 
@@ -37,10 +39,14 @@ def download_video(url: str, output_dir: str) -> str:
         "outtmpl": os.path.join(output_dir, "video.%(ext)s"),
         "merge_output_format": "mp4",
         "no_playlist": True,
-        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+        "extractor_args": {"youtube": {"player_client": ["ios", "android", "web"]}},
         "logger": _SilentLogger(errors),
         "ignoreerrors": False,
     }
+
+    cookies_file = os.environ.get("YOUTUBE_COOKIES_FILE")
+    if cookies_file and os.path.isfile(cookies_file):
+        ydl_opts["cookiefile"] = cookies_file
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ret = ydl.download([url])
