@@ -135,6 +135,7 @@ uvicorn api.main:app --host 0.0.0.0 --port 8001 --reload
 │ Clip Export         │ FFmpeg (seek + cut, MP4, async background task)        │
 │ Auth                │ python-jose HS256 JWT (internal service token)         │
 │ Cross-process lock  │ filelock (OS advisory lock - safe against SIGKILL)     │
+│ JS Runtime          │ Deno 2.x (n-challenge solver via ejs:github)           │
 │ Container           │ Docker + Docker Compose                                │
 └─────────────────────┴────────────────────────────────────────────────────────┘
 ```
@@ -422,6 +423,7 @@ token = jwt.encode({"sub": "prostaff-api", "iat": int(time.time())}, SECRET, "HS
 | `INTERNAL_JWT_SECRET` | Yes | - | Shared secret with prostaff-api (HS256) |
 | `DATABASE_URL` | No | `sqlite:///./videoai.db` | SQLite database path |
 | `CLIPS_DIR` | No | `/tmp/videoai_clips` | Directory for exported MP4 clips |
+| `YOUTUBE_COOKIES_FILE` | No | - | Path to Netscape-format cookie file for age-restricted / bot-gated videos |
 
 ---
 
@@ -531,7 +533,36 @@ docker compose restart
   if cold-start latency is unacceptable
 - FileLock path /tmp/videoai_analysis.lock is released automatically on SIGKILL
   (OS closes fd when process dies - no stale lock risk)
+- Deno is installed in the Dockerfile and linked to /usr/local/bin/deno
+  It is required for yt-dlp to solve YouTube's n-challenge (EJS solver via ejs:github)
+  Without Deno, yt-dlp can only download public videos and misses format URLs for most content
 ```
+
+### YouTube bot detection
+
+yt-dlp 2026+ requires a JavaScript runtime to solve YouTube's n-challenge (signature decryption).
+The Dockerfile installs Deno and the downloader configures `remote_components: ejs:github` so
+yt-dlp fetches the solver script on demand.
+
+For age-restricted or account-gated videos, also supply a cookie file:
+
+```bash
+# 1. Install "Get cookies.txt LOCALLY" extension in Brave/Chrome
+# 2. Open youtube.com while logged in, export the file
+# 3. Copy it to the container and set the env var in Coolify:
+
+docker cp youtube_cookies.txt prostaff-videoai:/app/youtube_cookies.txt
+# YOUTUBE_COOKIES_FILE=/app/youtube_cookies.txt
+```
+
+**Important:** yt-dlp overwrites the cookie file with updated session tokens during download.
+The downloader protects the master file by copying it to a `tempfile.mkstemp` temp path before
+each download and deleting the copy when done. To update cookies, `docker cp` a fresh export
+— the original file on disk is never modified by yt-dlp.
+
+Cookie rotation by YouTube (happens when the same account is used from a server IP):
+- Symptom: `The provided YouTube account cookies are no longer valid`
+- Fix: export fresh cookies from the browser and `docker cp` again
 
 ### Directory structure
 
@@ -635,3 +666,4 @@ Security finding fixed during setup: `clips.py` was passing `video_url` to ffmpe
 **Tests**: 82 passing (pytest, all mocked - no Docker required)
 **Integration**: prostaff-api VOD Review module → import_from_job → VodTimestamp
 **Code Quality**: Ruff 0 violations, Bandit 0 issues, Semgrep 0 findings
+**YouTube**: Deno + ejs:github (n-challenge solver) + YOUTUBE_COOKIES_FILE (bot-gated videos)
